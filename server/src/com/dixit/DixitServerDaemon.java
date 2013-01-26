@@ -118,11 +118,31 @@ public class DixitServerDaemon extends NanoHTTPD {
 
 		int theRightCard = clients.get(storyTellerIndex).getVotedCard();
 		boolean theRightCardWasChosen = false;
+
 		int[] scoresToAdd = new int[clients.size()];
+		int[] cardOwners = new int[clients.size()];
+		int[] votes = new int[clients.size()];
 
-		clients.get(storyTellerIndex).addScore(1);
+		// build card owners and vote arrays
+		for (int i = 0; i < clients.size(); ++i) {
+			Client client = clients.get(i);
+			cardOwners[client.getMyCard()] = client.getId();
 
-		// for ()
+			votes[client.getVotedCard()]++;
+
+			if (theRightCard == client.getVotedCard()) {
+				theRightCardWasChosen = true;
+			}
+		}
+
+		for (int i = 0; i < clients.size(); ++i) {
+			Client client = clients.get(i);
+			scoresToAdd[client.getId()] = votes[client.getMyCard()];
+		}
+
+		if (theRightCardWasChosen) {
+			scoresToAdd[storyTellerIndex] += 2;
+		}
 
 		for (int i = 0; i < clients.size(); ++i) {
 			clients.get(i).resetVote();
