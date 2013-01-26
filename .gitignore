@@ -19,3 +19,7 @@ eclimd.log
 android-client/bin/
 android-client/gen/
 
+###################
+# Vim backup files
+###################
+*.swp
