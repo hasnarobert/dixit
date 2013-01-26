@@ -7,3 +7,15 @@
 # Eclimd log file
 ##################
 eclimd.log
+
+#####################
+# OSX specific files
+# ###################
+.DS_Store
+
+################
+# Android build
+################
+android-client/bin/
+android-client/gen/
+
