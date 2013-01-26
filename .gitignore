@@ -1,0 +1,9 @@
+####################
+# Eclipse workspace
+####################
+.metadata/
+
+##################
+# Eclimd log file
+##################
+eclimd.log
