@@ -19,6 +19,11 @@ eclimd.log
 android-client/bin/
 android-client/gen/
 
+###############
+# Server build
+# #############
+server/bin
+
 ###################
 # Vim backup files
 ###################
