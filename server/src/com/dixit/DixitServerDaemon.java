@@ -25,7 +25,7 @@ public class DixitServerDaemon extends NanoHTTPD {
 	 * It is the index inside clients array. It is incremented every time the
 	 * score is computed.
 	 */
-	private static int storyTellerIndex = 1;
+	private static int storyTellerIndex = 0;
 
 	/**
 	 * Server's constructor.
@@ -148,13 +148,12 @@ public class DixitServerDaemon extends NanoHTTPD {
 	}
 
 	/**
-	 * Computes and updates the score. TODO Are they computed correctly ???
+	 * Computes and updates the score.
 	 */
 	private void updateScore() {
 		System.out.println("Updating score");
 
-		int theRightCard = clients.get(storyTellerIndex).getVotedCard();
-		boolean theRightCardWasChosen = false;
+		int theRightCard = clients.get(storyTellerIndex).getMyCard();
 
 		int[] scoresToAdd = new int[clients.size() + 1];
 		int[] cardOwners = new int[clients.size() + 1];
@@ -166,22 +165,46 @@ public class DixitServerDaemon extends NanoHTTPD {
 			cardOwners[client.getMyCard()] = client.getId();
 
 			votes[client.getVotedCard()]++;
-
-			if (theRightCard == client.getVotedCard()) {
-				theRightCardWasChosen = true;
-			}
 		}
 
 		// The story teller votes his own card. Here that point is removed
-		votes[storyTellerIndex]--;
+		votes[theRightCard]--;
 
-		for (int i = 0; i < clients.size(); ++i) {
-			Client client = clients.get(i);
-			scoresToAdd[client.getId()] = votes[client.getMyCard()];
-		}
+		// Compute the number of points each player gets in the current round
+		if (votes[theRightCard] == clients.size() - 1
+				|| votes[theRightCard] == 0) {
+			// Treat special cases : the right card was chosen by all or none
+			// player,
+			// so all player except the story teller gets 2 points.
 
-		if (theRightCardWasChosen) {
-			scoresToAdd[storyTellerIndex] += 2;
+			for (int i = 0; i < clients.size(); ++i) {
+				if (storyTellerIndex != i) {
+					scoresToAdd[clients.get(i).getId()] += 2;
+				}
+			}
+		} else {
+			// The right card was voted at least one time and not by all
+			// players.
+			// The story teller and whoever guessed the card gets 3 points.
+			//
+			// The owner of other voted card gets 1 point.
+
+			for (int i = 0; i < clients.size(); ++i) {
+				Client client = clients.get(i);
+
+				// If this player guessed the right card, he gets 3 points.
+				// In this is included even the story teller.
+				if (client.getVotedCard() == theRightCard) {
+					scoresToAdd[client.getId()] += 3;
+				}
+
+				// Add 1 point for each time the card of the current player was
+				// voted.
+				// NOTE : The current player must not be the story teller.
+				if (i != storyTellerIndex) {
+					scoresToAdd[client.getId()] += votes[client.getMyCard()];
+				}
+			}
 		}
 
 		// Add scores to the board and reset votes
@@ -191,7 +214,8 @@ public class DixitServerDaemon extends NanoHTTPD {
 			clients.get(i).addScore(scoresToAdd[client.getId()]);
 		}
 
-		storyTellerIndex++;
+		// The next person is the story teller
+		storyTellerIndex = (storyTellerIndex + 1) % clients.size();
 	}
 
 	public static void main(String[] args) {
