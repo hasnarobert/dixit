@@ -33,17 +33,90 @@ var app = {
     // The scope of 'this' is the event. In order to call the 'receivedEvent'
     // function, we must explicity call 'app.receivedEvent(...);'
     onDeviceReady: function() {
-        app.receivedEvent('deviceready');
-    },
-    // Update DOM on a Received Event
-    receivedEvent: function(id) {
-        var parentElement = document.getElementById(id);
-        var listeningElement = parentElement.querySelector('.listening');
-        var receivedElement = parentElement.querySelector('.received');
+		// Setup listeners
+		var loginButton = document.getElementById("login-button");
+		loginButton.addEventListener("click", app.loginHandler, false);
+	
+	},
 
-        listeningElement.setAttribute('style', 'display:none;');
-        receivedElement.setAttribute('style', 'display:block;');
+	loginHandler: function() {
+		var serverAddress = document.getElementById("server-address").value;
+		var playerName = document.getElementById("player-name").value;
 
-        console.log('Received Event: ' + id);
-    }
+		app.serverAddress = serverAddress;
+
+		$.ajax(serverAddress + "newclient?name="+ playerName)
+			.done(function(message) {
+				app.clientId = parseInt(message);
+
+				app.showOtherScreen();
+				
+			}).fail(function(xhr, textStatus, error) {
+				if (error == "Bad Request") {
+					alert("The name is already taken. Choose other.");
+				} else {
+					alert("Could not connect to server.")
+				}
+			});
+	},
+
+	showOtherScreen: function() {
+		// Swap visibility of the containers
+		document.getElementById("login-container").style.visibility = "hidden";
+		document.getElementById("game-container").style.visibility = "visible";
+
+		app.startGameLoop();
+	},
+
+	startGameLoop: function() {
+		$.ajax(app.serverAddress + "score")
+			.done(function(message) {
+				alert(message);
+			})
+			.fail(function() {
+				alert("Could not get score from server");
+			});
+	},
+
+	buildDropDown: function(container, numberOfPlayers, callback) {
+		// Remove all elements
+		$(container).empty();
+
+		// Recreate all elements
+		for (var i = 0; i < numberOfPlayers; ++i) {
+			var current = document.createElement("li");
+			var a = document.createElement("a");
+			current.appendChild(a);
+
+			a.setAttribute("tabindex", "-1");
+			a.setAttribute("href", "#");
+			a.innerText = i+1;
+
+			current.addEventListener("click", callback, false);
+
+			var divider = document.createElement("li");
+			divider.setAttribute("class", "divider");
+			
+			container.appendChild(current);
+			if (i < numberOfPlayers - 1) {
+				container.appendChild(divider);
+			}
+		}
+	},
+
+	voteChangedHandler: function () {
+		var currentVoteContainer = document.getElementById("current-vote");
+		currentVoteContainer.innerText = this.textContent;
+	},
+
+	mycardChangedHandler: function() {
+		var mycardContainer = document.getElementById("current-mycard");
+		mycardContainer.innerText = this.textContent;
+	}
+
 };
+
+
+// Inititalize app
+app.initialize();
+
