@@ -6,30 +6,58 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+/**
+ * The server class.
+ *
+ * It uses the embedded lightweight NanoHTTPD http server to handle
+ * communication with clients.
+ */
 public class DixitServerDaemon extends NanoHTTPD {
+
+	// Server constants
+	private static final int SERVER_PORT = 8080;
 
 	private static List<Client> clients = new ArrayList<Client>();
 
-	private static int storyTellerIndex = 0;
+	/**
+	 * The index of the Player who is telling the story.
+	 *
+	 * It is the index inside clients array. It is incremented every time the
+	 * score is computed.
+	 */
+	private static int storyTellerIndex = 1;
 
+	/**
+	 * Server's constructor.
+	 */
 	public DixitServerDaemon() throws IOException {
-		super(8080, new File("."));
+		// I have no clue what the file instance represents :p
+		super(SERVER_PORT, new File("."));
 	}
 
+	/**
+	 * Global http server handler. Is the "dispatcher" of all Api handlers.
+	 */
 	public Response serve(String uri, String method, Properties header,
 			Properties params, Properties files) {
 
 		if (uri.startsWith("/newclient")) {
+			// New client Api call
 			return serveNewClient(params);
 		} else if (uri.startsWith("/score")) {
+			// Score Api call
 			return serveScore();
 		} else if (uri.startsWith("/vote")) {
+			// Vote Api call
 			return serveVote(params);
 		} else {
 			return new NanoHTTPD.Response(HTTP_NOTFOUND, MIME_HTML, "");
 		}
 	}
 
+	/**
+	 * New client/User/Player Api handler
+	 */
 	public Response serveNewClient(Properties params) {
 		if (params.containsKey("name") == false) {
 			String message = "Must specify a name to login";
@@ -58,6 +86,9 @@ public class DixitServerDaemon extends NanoHTTPD {
 		return new NanoHTTPD.Response(HTTP_OK, MIME_HTML, response);
 	}
 
+	/**
+	 * Score Api handler
+	 */
 	public Response serveScore() {
 		StringBuilder builder = new StringBuilder();
 
@@ -72,6 +103,9 @@ public class DixitServerDaemon extends NanoHTTPD {
 		return new NanoHTTPD.Response(HTTP_OK, MIME_PLAINTEXT, message);
 	}
 
+	/**
+	 * Vote api handler
+	 */
 	public Response serveVote(Properties params) {
 		if (params.containsKey("userId") == false
 				|| params.containsKey("votedCard") == false
@@ -113,15 +147,18 @@ public class DixitServerDaemon extends NanoHTTPD {
 		return new NanoHTTPD.Response(HTTP_OK, MIME_PLAINTEXT, "");
 	}
 
+	/**
+	 * Computes and updates the score. TODO Are they computed correctly ???
+	 */
 	private void updateScore() {
 		System.out.println("Updating score");
 
 		int theRightCard = clients.get(storyTellerIndex).getVotedCard();
 		boolean theRightCardWasChosen = false;
 
-		int[] scoresToAdd = new int[clients.size()];
-		int[] cardOwners = new int[clients.size()];
-		int[] votes = new int[clients.size()];
+		int[] scoresToAdd = new int[clients.size() + 1];
+		int[] cardOwners = new int[clients.size() + 1];
+		int[] votes = new int[clients.size() + 1];
 
 		// build card owners and vote arrays
 		for (int i = 0; i < clients.size(); ++i) {
@@ -135,6 +172,9 @@ public class DixitServerDaemon extends NanoHTTPD {
 			}
 		}
 
+		// The story teller votes his own card. Here that point is removed
+		votes[storyTellerIndex]--;
+
 		for (int i = 0; i < clients.size(); ++i) {
 			Client client = clients.get(i);
 			scoresToAdd[client.getId()] = votes[client.getMyCard()];
@@ -144,8 +184,11 @@ public class DixitServerDaemon extends NanoHTTPD {
 			scoresToAdd[storyTellerIndex] += 2;
 		}
 
+		// Add scores to the board and reset votes
 		for (int i = 0; i < clients.size(); ++i) {
+			Client client = clients.get(i);
 			clients.get(i).resetVote();
+			clients.get(i).addScore(scoresToAdd[client.getId()]);
 		}
 
 		storyTellerIndex++;
